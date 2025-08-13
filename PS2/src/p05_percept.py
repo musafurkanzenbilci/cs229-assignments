@@ -16,6 +16,12 @@ def initial_state():
     """
 
     # *** START CODE HERE ***
+    return {
+        'xI': [],
+        'yI': [],
+        'alpha' : [],
+        'b': 0,
+    }
     # *** END CODE HERE ***
 
 
@@ -33,6 +39,12 @@ def predict(state, kernel, x_i):
         Returns the prediction (i.e 0 or 1)
     """
     # *** START CODE HERE ***
+    s = 0
+    for ak,xk,yk in zip(state['alpha'], state['xI'], state['yI']):
+        s += ak * yk * kernel(xk, x_i)
+    s += state['b']
+    
+    return 0 if s==0 else sign(s)
     # *** END CODE HERE ***
 
 
@@ -47,7 +59,19 @@ def update_state(state, kernel, learning_rate, x_i, y_i):
         y_i: A 0 or 1 indicating the label for a single instance
     """
     # *** START CODE HERE ***
+    # y_truth = convert_01_to_minus11(y_i)
+
+    y_pred = predict(state, kernel, x_i)
+
+    if y_i != y_pred:
+        state['xI'].append(x_i)
+        state['yI'].append(convert_01_to_minus11(y_i))
+        state['alpha'].append(learning_rate)
+        state['b'] += learning_rate * convert_01_to_minus11(y_i)
     # *** END CODE HERE ***
+
+def convert_01_to_minus11(x):
+    return 1 if x == 1 else -1
 
 
 def sign(a):
