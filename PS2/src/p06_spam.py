@@ -21,6 +21,9 @@ def get_words(message):
     """
 
     # *** START CODE HERE ***
+    x = ''.join(e.lower() for e in message if (e.isalnum() or e == " "))
+    words = [w for w in x.split(' ') if w]
+    return words
     # *** END CODE HERE ***
 
 
@@ -41,6 +44,24 @@ def create_dictionary(messages):
     """
 
     # *** START CODE HERE ***
+    word_dict = {}
+    invalid_words = set()
+    for message in messages:
+        words = set(get_words(message))
+        for word in words:
+            invalid_words.add(word)
+            val = word_dict.get(word, 0) + 1
+            word_dict[word] = val
+            if val >= 5:
+                invalid_words.remove(word)
+    
+    for w in invalid_words:
+        del word_dict[w]
+
+    for i, w in enumerate(word_dict):
+        word_dict[w] = i
+
+    return word_dict
     # *** END CODE HERE ***
 
 
@@ -62,6 +83,16 @@ def transform_text(messages, word_dictionary):
         A numpy array marking the words present in each message.
     """
     # *** START CODE HERE ***
+    res = []
+    for message in messages:
+        words = get_words(message)
+        word_list = len(word_dictionary) * [0]
+        for word in words:
+            if word in word_dictionary:
+                word_list[word_dictionary[word]] += 1
+        res.append(word_list)
+    return np.array(res)
+
     # *** END CODE HERE ***
 
 
@@ -82,6 +113,29 @@ def fit_naive_bayes_model(matrix, labels):
     """
 
     # *** START CODE HERE ***
+
+    #  log(P(y|x)) = log(P(y)) + E log(P(x_i|y))
+
+    n, V = matrix.shape
+
+    X = matrix
+    y = labels
+
+    P = [0, 1]
+    P[1] = np.log(y.mean())
+    P[0] = np.log(1 - P[1])
+
+    X_pos = X[y == 1]
+    X_neg = X[y == 0]
+
+    word_counts_pos = X_pos.sum(axis=0)
+    word_counts_neg = X_neg.sum(axis=0)
+
+    log_p_pos = np.log(word_counts_pos + 1) - np.log(word_counts_pos.sum() + 1 * V)
+    log_p_neg = np.log(word_counts_neg + 1) - np.log(word_counts_neg.sum() + 1 * V)
+
+    return P, log_p_pos, log_p_neg
+    
     # *** END CODE HERE ***
 
 
@@ -98,6 +152,14 @@ def predict_from_naive_bayes_model(model, matrix):
     Returns: A numpy array containg the predictions from the model
     """
     # *** START CODE HERE ***
+    #  P(y|x) = P(y) * ∏P(x_i|y)
+    #  log(P(y|x)) = log(P(y)) + E log(P(x_i|y))
+    P = model[0]
+    probs_pos = model[1]
+    probs_neg = model[2]
+    res_neg = P[0] + matrix @ probs_neg
+    res_pos = P[1] + matrix @ probs_pos
+    return (res_pos > res_neg).astype(int)
     # *** END CODE HERE ***
 
 
@@ -114,8 +176,18 @@ def get_top_five_naive_bayes_words(model, dictionary):
     Returns: The top five most indicative words in sorted order with the most indicative first
     """
     # *** START CODE HERE ***
+    P, log_probs_pos, log_probs_neg = model
+    division = log_probs_pos / log_probs_neg
+    print()
+    top_5_indices = np.argsort(division)[:5]
+    result = []
+    for k, v in dictionary.items():
+        if v in top_5_indices:
+            result.append(k)
+    return result
     # *** END CODE HERE ***
 
+import svm
 
 def compute_best_svm_radius(train_matrix, train_labels, val_matrix, val_labels, radius_to_consider):
     """Compute the optimal SVM radius using the provided training and evaluation datasets.
@@ -134,6 +206,15 @@ def compute_best_svm_radius(train_matrix, train_labels, val_matrix, val_labels, 
         The best radius which maximizes SVM accuracy.
     """
     # *** START CODE HERE ***
+    max_score = 0
+    max_r = radius_to_consider[0]
+    for r in radius_to_consider:
+        predictions = svm.train_and_predict_svm(train_matrix, train_labels, val_matrix, r)
+        accuracy_score = np.mean(predictions == val_labels)
+        if accuracy_score > max_score:
+            max_score = accuracy_score
+            max_r = r
+    return max_r
     # *** END CODE HERE ***
 
 
